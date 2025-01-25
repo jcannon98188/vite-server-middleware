@@ -1,19 +1,17 @@
-﻿using System;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.SpaServices;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Proggmatic.SpaServices.Vite.Npm;
+using Proggmatic.SpaServices.Vite.Util;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.SpaServices;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-
-using Proggmatic.SpaServices.Vite.Npm;
-using Proggmatic.SpaServices.Vite.Util;
 
 
 namespace Proggmatic.SpaServices.Vite;
@@ -24,11 +22,10 @@ namespace Proggmatic.SpaServices.Vite;
 internal static class ViteMiddleware
 {
     private const string LOG_CATEGORY_NAME = "Microsoft.AspNetCore.SpaServices";
-    private const string CLI_SERVE_COMPLETION_REGEX = "running at";
     private static readonly TimeSpan RegexMatchTimeout = TimeSpan.FromSeconds(5); // This is a development-time only feature, so a very long timeout is fine
 
 
-    public static void Attach(ISpaBuilder spaBuilder, string scriptName)
+    public static void Attach(ISpaBuilder spaBuilder, string scriptName, string cliRegex = "running in")
     {
         var pkgManagerCommand = spaBuilder.Options.PackageManagerCommand;
         var sourcePath = spaBuilder.Options.SourcePath;
@@ -48,7 +45,7 @@ internal static class ViteMiddleware
         var applicationStoppingToken = appBuilder.ApplicationServices.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping;
         var logger = LoggerFinder.GetOrCreateLogger(appBuilder, LOG_CATEGORY_NAME);
         var diagnosticSource = appBuilder.ApplicationServices.GetRequiredService<DiagnosticSource>();
-        var portTask = StartCreateViteAppServerAsync(sourcePath, scriptName, pkgManagerCommand, devServerPort, logger, diagnosticSource, applicationStoppingToken);
+        var portTask = StartCreateViteAppServerAsync(sourcePath, scriptName, pkgManagerCommand, devServerPort, logger, diagnosticSource, applicationStoppingToken, cliRegex);
 
         // Everything we proxy is hardcoded to target http://localhost because:
         // - the requests are always from the local machine (we're not accepting remote
@@ -71,7 +68,7 @@ internal static class ViteMiddleware
     }
 
     private static async Task<int> StartCreateViteAppServerAsync(
-        string sourcePath, string scriptName, string pkgManagerCommand, int portNumber, ILogger logger, DiagnosticSource diagnosticSource, CancellationToken applicationStoppingToken)
+        string sourcePath, string scriptName, string pkgManagerCommand, int portNumber, ILogger logger, DiagnosticSource diagnosticSource, CancellationToken applicationStoppingToken, string cliRegex)
     {
         if (portNumber == default)
         {
@@ -100,7 +97,7 @@ internal static class ViteMiddleware
             // no compiler warnings. So instead of waiting for that, consider it ready as soon
             // as it starts listening for requests.
             await scriptRunner.StdOut.WaitForMatch(
-                new Regex(CLI_SERVE_COMPLETION_REGEX, RegexOptions.None, RegexMatchTimeout));
+                new Regex(cliRegex, RegexOptions.None, RegexMatchTimeout));
         }
         catch (EndOfStreamException ex)
         {

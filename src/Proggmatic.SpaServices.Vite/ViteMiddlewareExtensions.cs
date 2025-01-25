@@ -1,6 +1,5 @@
-using System;
-
 using Microsoft.AspNetCore.SpaServices;
+using System;
 
 
 namespace Proggmatic.SpaServices.Vite;
@@ -21,9 +20,11 @@ public static class ViteMiddlewareExtensions
     /// </summary>
     /// <param name="spaBuilder">The <see cref="ISpaBuilder"/>.</param>
     /// <param name="npmScript">The name of the script in your package.json file that launches the Vite server.</param>
+    /// <param name="cliRegex">The phrase to look for in the vite output to determine the server is ready to run.</param>
     public static void UseViteServer(
         this ISpaBuilder spaBuilder,
-        string npmScript = "dev")
+        string npmScript = "dev",
+        string cliRegex = "running in")
     {
         ArgumentNullException.ThrowIfNull(spaBuilder);
 
@@ -35,6 +36,6 @@ public static class ViteMiddlewareExtensions
         if (string.IsNullOrEmpty(spaOptions.PackageManagerCommand))
             spaOptions.PackageManagerCommand = "npm";
 
-        ViteMiddleware.Attach(spaBuilder, npmScript);
+        ViteMiddleware.Attach(spaBuilder, npmScript, cliRegex);
     }
 }
